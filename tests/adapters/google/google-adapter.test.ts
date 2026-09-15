@@ -583,3 +583,100 @@ describe("google adapter — direct -tiered wire renames", () => {
     }
   });
 });
+
+describe("google adapter — structured output", () => {
+  test("carries json_schema format into generationConfig responseMimeType and responseJsonSchema", async () => {
+    const parsed = {
+      modelId: "gemini-2.5-flash",
+      stream: false,
+      options: {
+        textFormat: {
+          type: "json_schema",
+          name: "output_schema",
+          schema: {
+            type: "object",
+            properties: { answer: { type: "string" } },
+            required: ["answer"],
+          },
+        },
+      },
+      context: { messages: [{ role: "user", content: "hello" }] },
+    } as unknown as OcxParsedRequest;
+
+    const body = await geminiBody(parsed);
+    const gc = body.generationConfig as Record<string, unknown>;
+    expect(gc.responseMimeType).toBe("application/json");
+    expect(gc.responseJsonSchema).toEqual({
+      type: "object",
+      properties: { answer: { type: "string" } },
+      required: ["answer"],
+    });
+  });
+
+  test("carries structured output through Cloud Code Assist envelope", async () => {
+    const ccaProvider = {
+      adapter: "google",
+      baseUrl: "https://daily-cloudcode-pa.googleapis.com",
+      googleMode: "cloud-code-assist" as const,
+      apiKey: "test-token",
+      project: "test-project",
+    };
+    const parsed = {
+      modelId: "gemini-3.8-flash",
+      stream: false,
+      options: {
+        textFormat: {
+          type: "json_schema",
+          name: "decision_format",
+          schema: {
+            type: "object",
+            properties: { decision: { type: "string" } },
+            required: ["decision"],
+          },
+        },
+      },
+      context: { messages: [{ role: "user", content: "review request" }] },
+    } as unknown as OcxParsedRequest;
+
+    const request = await createGoogleAdapter(ccaProvider).buildRequest(parsed);
+    const envelope = JSON.parse(request.body) as Record<string, unknown>;
+    const req = envelope.request as Record<string, unknown>;
+    const gc = req.generationConfig as Record<string, unknown>;
+    expect(gc.responseMimeType).toBe("application/json");
+    expect(gc.responseJsonSchema).toEqual({
+      type: "object",
+      properties: { decision: { type: "string" } },
+      required: ["decision"],
+    });
+  });
+
+  test("refuses structured output for image capable models", async () => {
+    const parsed = {
+      modelId: "gemini-3.1-flash-image",
+      stream: false,
+      options: {
+        textFormat: { type: "json_object" },
+      },
+      context: { messages: [{ role: "user", content: "generate image" }] },
+    } as unknown as OcxParsedRequest;
+
+    expect(createGoogleAdapter(provider).buildRequest(parsed)).rejects.toThrow(
+      "google image-capable models cannot combine image output with structured output",
+    );
+  });
+
+  test("refuses json_schema without schema", async () => {
+    const parsed = {
+      modelId: "gemini-2.5-flash",
+      stream: false,
+      options: {
+        textFormat: { type: "json_schema" },
+      },
+      context: { messages: [{ role: "user", content: "hello" }] },
+    } as unknown as OcxParsedRequest;
+
+    expect(createGoogleAdapter(provider).buildRequest(parsed)).rejects.toThrow(
+      "google structured output requires text.format.schema for type json_schema",
+    );
+  });
+});

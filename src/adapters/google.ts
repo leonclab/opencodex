@@ -786,6 +786,18 @@ export function createGoogleAdapter(provider: OcxProviderConfig): ProviderAdapte
       : {}),
 
     async buildRequest(parsed: OcxParsedRequest) {
+      const requestedTextFormat = parsed.options.textFormat;
+      if (requestedTextFormat) {
+        if (isImageCapableModel(parsed.modelId)) {
+          throw new Error(
+            "google image-capable models cannot combine image output with structured output — "
+            + "remove response_format or select a text model",
+          );
+        }
+        if (requestedTextFormat.type === "json_schema" && !requestedTextFormat.schema) {
+          throw new Error("google structured output requires text.format.schema for type json_schema");
+        }
+      }
       const routedModelId = provider.googleMode === "cloud-code-assist"
         ? resolveAntigravityEffortWireModel(
             parsed.modelId,
@@ -840,6 +852,13 @@ export function createGoogleAdapter(provider: OcxProviderConfig): ProviderAdapte
       if (thinkingLevel) generationConfig.thinkingConfig = { thinkingLevel };
       if (!generationConfig.thinkingConfig && isImageCapableModel(parsed.modelId)) {
         generationConfig.responseModalities = ["TEXT", "IMAGE"];
+      }
+      const textFormat = parsed.options.textFormat;
+      if (textFormat) {
+        generationConfig.responseMimeType = "application/json";
+        if (textFormat.type === "json_schema" && textFormat.schema) {
+          generationConfig.responseJsonSchema = textFormat.schema;
+        }
       }
       if (Object.keys(generationConfig).length > 0) body.generationConfig = generationConfig;
 
