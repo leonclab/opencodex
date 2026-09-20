@@ -14,7 +14,7 @@ import {
   projectConfigRebaseProvenance,
 } from "./config/rebase-provenance";
 import { getConfigDir, getConfigPath, hardenConfigDir } from "./config/paths";
-export { DEFAULT_SUBAGENT_MODELS } from "./config/subagent-models";
+export { DEFAULT_SUBAGENT_MODELS, getSubagentModels, normalizeSubagentModels, validateSubagentModels, filterEnabledSubagentModels } from "./config/subagent-models";
 export {
   AtomicWriteResidualTempError,
   AtomicWriteSecretResidualError,

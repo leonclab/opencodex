@@ -5,6 +5,8 @@ import type { RawEntry } from "./parsing";
 import { SUPPORTED_NATIVE_OPENAI_SLUGS } from "./metadata";
 import { trustedAccountBoundNativeCatalogSlug } from "./account-models";
 import { catalogEntryEfforts } from "./effort";
+import { getSubagentModels, normalizeSubagentModels } from "../../config/subagent-models";
+import type { OcxConfig } from "../../types";
 
 export const MAX_SPAWN_AGENT_MODEL_OVERRIDES = 5;
 
@@ -108,11 +110,7 @@ export function effectiveSubagentRoster(
   surface: SpawnAgentSurface,
   catalogEntries?: readonly RawEntry[],
 ): EffectiveSubagentRoster {
-  const configured = configuredModels
-    .filter(model => model.trim().length > 0)
-    .filter((model, index, all) =>
-      !all.slice(0, index).some(previous => slugsEquivalent(previous, model))
-    );
+  const configured = normalizeSubagentModels(configuredModels, Number.MAX_SAFE_INTEGER);
   const entries = catalogEntries ?? readCatalog(readCodexCatalogPath())?.models ?? [];
   const ordered = entries
     .map((entry, index) => ({ entry, index }))
@@ -173,4 +171,26 @@ export function effectiveSubagentRoster(
     return [{ configured: model, catalogModel: hidden.slug as string, reason: "picker_hidden" }];
   });
   return { candidates, advertised, excluded };
+}
+
+/**
+ * Resolves the effective subagent roster directly from an OcxConfig object,
+ * reading and validating config.subagentModels (falling back to defaults).
+ */
+export function resolveConfiguredSubagentRoster(
+  config: OcxConfig,
+  surface: SpawnAgentSurface,
+  catalogEntries?: readonly RawEntry[],
+): EffectiveSubagentRoster {
+  return effectiveSubagentRoster(getSubagentModels(config), surface, catalogEntries);
+}
+
+/**
+ * Checks whether a given model is an eligible, advertised subagent candidate in the given roster.
+ */
+export function isSubagentCandidateAvailable(
+  model: string,
+  roster: EffectiveSubagentRoster,
+): boolean {
+  return roster.advertised.some(adv => slugsEquivalent(adv.model, model));
 }

@@ -6,6 +6,8 @@ export {
   isEligibleV2SubagentEntry,
   configuredCatalogEntry,
   effectiveSubagentRoster,
+  resolveConfiguredSubagentRoster,
+  isSubagentCandidateAvailable,
 } from "./subagent-roster";
 export type {
   SpawnAgentSurface,

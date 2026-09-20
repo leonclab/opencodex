@@ -101,6 +101,12 @@ import {
 import { hasResponsesItemIdRepair, relaySseWithResponsesItemIdRepair } from "../responses-item-id-repair";
 import type { EffectiveSubagentModel, EffectiveSubagentRoster, SpawnAgentSurface } from "../../codex/catalog";
 import type { TranslatorBudget } from "../../lib/translator-budget";
+import {
+  subagentRosterText,
+  SUBAGENT_ROLE_BOUNDARIES_CONTRACT,
+  subagentRoleBoundaryText,
+} from "./subagent-roster-text";
+export { subagentRosterText, SUBAGENT_ROLE_BOUNDARIES_CONTRACT, subagentRoleBoundaryText };
 
 
 export function buildToolBridgeMaps(parsed: OcxParsedRequest, budget?: TranslatorBudget): {
@@ -576,19 +582,7 @@ export function applyInjectionPlaceholders(prompt: string, model?: string, effor
 
 
 
-export function subagentRosterText(models: Array<{ model: string; efforts: string[] }>): string {
-  if (models.length === 0) return "";
-  const ladders = new Set(models.map(model => model.efforts.join("/")));
-  if (!ladders.has("") && ladders.size === 1) {
-    return ` Available models (reasoning_effort ${[...ladders][0]}): ${models
-      .map(model => `"${model.model}"`)
-      .join(", ")}.`;
-  }
-  const entries = models.map(model => model.efforts.length > 0
-    ? `"${model.model}" (${model.efforts.join("/")})`
-    : `"${model.model}"`);
-  return ` Available models (valid reasoning_effort): ${entries.join(", ")}.`;
-}
+// subagentRosterText moved to ./subagent-roster-text and re-exported above
 
 
 

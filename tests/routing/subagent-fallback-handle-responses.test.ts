@@ -9,6 +9,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { saveCodexAccountCredential } from "../../src/codex/account-store";
+import { clearCodexQuotaPrimeState } from "../../src/codex/auth-api";
 import {
   clearAccountQuota,
   updateAccountQuota,
@@ -68,6 +69,7 @@ beforeEach(() => {
   // Gated-native negative rosters are cached process-wide for 15s; a real-network
   // miss in one test must not fail-closed the next test's entitlement lookups.
   resetCodexModelEntitlementCacheForTests();
+  clearCodexQuotaPrimeState();
 });
 
 afterEach(() => {
@@ -84,6 +86,7 @@ afterEach(() => {
   else process.env.OPENCODEX_HOME = previousOpencodexHome;
   if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
   else process.env.CODEX_HOME = previousCodexHome;
+  clearCodexQuotaPrimeState();
 });
 
 function fernetFixture(ciphertextBytes = 16): string {

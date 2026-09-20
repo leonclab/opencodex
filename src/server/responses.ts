@@ -3,7 +3,7 @@
 import { handleResponsesCompact as handleResponsesCompactImpl } from "./responses/compact";
 import { requestPacingOverloadResponse } from "./responses/pacing-overload";
 
-export { buildToolBridgeMaps, isV1CollabSurface, collabSurface, multiAgentGuidanceText, V2_GUIDANCE_CHAR_BUDGET, injectDeveloperMessage } from "./responses/collaboration";
+export { buildToolBridgeMaps, isV1CollabSurface, collabSurface, multiAgentGuidanceText, V2_GUIDANCE_CHAR_BUDGET, injectDeveloperMessage, subagentRosterText, SUBAGENT_ROLE_BOUNDARIES_CONTRACT, subagentRoleBoundaryText } from "./responses/collaboration";
 export type { MultiAgentGuidanceOptions, MultiAgentGuidanceDeps } from "./responses/collaboration";
 export { hasUnreadableEncryptedAgentTask, sanitizeEncryptedContentInPlace, stripAgentMessageCiphertextInPlace } from "./responses/encrypted-payload";
 export { COMPACT_RESPONSE_MAX_BYTES, bufferCompactResponse } from "./responses/compact";

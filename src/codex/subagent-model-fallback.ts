@@ -64,20 +64,37 @@ export type SubagentFallbackRouteEligibility = (route: RouteResult) => boolean;
 let subagentQuotaPrimeForTests: SubagentQuotaPrimeFn | null = null;
 let quotaPrimeInFlight: Promise<void> | null = null;
 
-type ModelHealth = {
+export const MAX_SUBAGENT_ROUTE_RECURSION_DEPTH = 10;
+export const MAX_SUBAGENT_MODEL_FAILURE_TTL_MS = 10 * 60_000;
+
+export type ModelHealth = {
   unavailableUntil: number;
   reason: string;
+  consecutiveFailures: number;
+  lastFailureAt: number;
 };
 
 const modelHealth = new Map<string, ModelHealth>();
 const quotaPrimedAt = new Map<string, number>();
 const knownProviderIdSet = new Set(PROVIDER_REGISTRY.map(entry => entry.id.toLowerCase()));
 
+let subagentRouteRecursionDepth = 0;
+const subagentInFlightRouteModels = new Set<string>();
+
 function tryRouteFallbackModel(config: OcxConfig, model: string): RouteResult | null {
+  if (!model || typeof model !== "string" || model.trim() === "") return null;
+  const key = fallbackChainKey(model.trim(), config.codexAccountNamespaces);
+  if (subagentRouteRecursionDepth >= MAX_SUBAGENT_ROUTE_RECURSION_DEPTH) return null;
+  if (subagentInFlightRouteModels.has(key)) return null;
+  subagentInFlightRouteModels.add(key);
+  subagentRouteRecursionDepth += 1;
   try {
     return routeModel(config, model);
   } catch {
     return null;
+  } finally {
+    subagentRouteRecursionDepth -= 1;
+    subagentInFlightRouteModels.delete(key);
   }
 }
 
@@ -410,19 +427,28 @@ export function noteSubagentModelFailure(
   now = Date.now(),
   ttlMs?: number,
 ): void {
-  const interval = ttlMs ?? DEFAULT_SUBAGENT_MODEL_FALLBACK_POLL_MS;
+  const baseInterval = ttlMs ?? pollIntervalMs(config);
   if (!isRateLimitOrQuotaFailureMessage(message)) return;
   const route = tryRouteFallbackModel(config, model);
   const poolScoped = !!route && isPoolCodexRoute(route);
+  const key = healthKey(
+    model,
+    resolveRouteFallbackAccountId(route, config, accountId),
+    poolScoped,
+  );
+  const existing = modelHealth.get(key);
+  const isRecentFailure = existing !== undefined
+    && (now - existing.lastFailureAt) <= (existing.unavailableUntil - existing.lastFailureAt) * 2;
+  const consecutiveFailures = isRecentFailure ? existing.consecutiveFailures + 1 : 1;
+  const multiplier = Math.min(Math.pow(1.5, consecutiveFailures - 1), 8);
+  const effectiveInterval = Math.min(baseInterval * multiplier, MAX_SUBAGENT_MODEL_FAILURE_TTL_MS);
   modelHealth.set(
-    healthKey(
-      model,
-      resolveRouteFallbackAccountId(route, config, accountId),
-      poolScoped,
-    ),
+    key,
     {
-      unavailableUntil: now + interval,
+      unavailableUntil: now + effectiveInterval,
       reason: "quota_exhausted",
+      consecutiveFailures,
+      lastFailureAt: now,
     },
   );
   sweepExpiredOnWrite(now);
@@ -443,6 +469,24 @@ export function resetSubagentModelFallbackStateForTests(): void {
   quotaPrimedAt.clear();
   quotaPrimeInFlight = null;
   subagentQuotaPrimeForTests = null;
+  subagentInFlightRouteModels.clear();
+  subagentRouteRecursionDepth = 0;
+}
+
+export function getSubagentModelHealthForTests(
+  model: string,
+  config: OcxConfig,
+  accountId?: string | null,
+): ModelHealth | undefined {
+  const route = tryRouteFallbackModel(config, model);
+  const poolScoped = !!route && isPoolCodexRoute(route);
+  return modelHealth.get(
+    healthKey(
+      model,
+      resolveRouteFallbackAccountId(route, config, accountId),
+      poolScoped,
+    ),
+  );
 }
 
 /** Test-only: inject the quota prime implementation used by {@link maybePrimeSubagentQuota}. */
