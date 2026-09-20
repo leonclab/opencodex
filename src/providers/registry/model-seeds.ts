@@ -298,6 +298,19 @@ export const DEEPSEEK_V4_LEGACY_MODELS = ["deepseek-v4-flash"];
  */
 export const DEEPSEEK_NATIVE_THINKING_MODELS = ["deepseek-flash", "deepseek-v4-flash"];
 export const DEEPSEEK_GATEWAY_THINKING_MODELS = ["deepseek-v4.1-flash", "deepseek-v4-flash"];
+export const DEEPSEEK_NATIVE_NO_JSON_SCHEMA_MODELS = [
+  "deepseek-flash",
+  "deepseek-v4-flash",
+  "deepseek-chat",
+  "deepseek-reasoner",
+];
+export const DEEPSEEK_GATEWAY_NO_JSON_SCHEMA_MODELS = [
+  "deepseek-flash",
+  "deepseek-v4.1-flash",
+  "deepseek-v4-flash",
+  "deepseek-chat",
+  "deepseek-reasoner",
+];
 /*
  * DeepSeek's legacy vision preview id (released 2026-08-21). First-party probes
  * in #4436 resolve it to image-capable `deepseek-flash`; retain the existing

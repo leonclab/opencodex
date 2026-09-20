@@ -102,6 +102,9 @@ describe("provider registry parity", () => {
      * constants back together fails here rather than in a user's request.
      */
     const nativeDeepseek = PROVIDER_REGISTRY.find(entry => entry.id === "deepseek");
+    expect(nativeDeepseek?.noJsonSchemaModels).toEqual([
+      "deepseek-flash", "deepseek-v4-flash", "deepseek-chat", "deepseek-reasoner", "deepseek-v4-flash-vision-exp",
+    ]);
     expect(nativeDeepseek?.defaultModel).toBe("deepseek-flash");
     expect(nativeDeepseek?.models).toContain("deepseek-flash");
     for (const map of [

@@ -161,6 +161,8 @@ describe("opencode-go DeepSeek json_schema downgrade", () => {
   });
 
   test("a listed DeepSeek route is downgraded to json_object", () => {
+    expect(buildWith("deepseek-flash").body.response_format).toEqual({ type: "json_object" });
+    expect(buildWith("opencode-go/deepseek-flash").body.response_format).toEqual({ type: "json_object" });
     expect(buildWith("deepseek-v4-flash").body.response_format).toEqual({ type: "json_object" });
     expect(buildWith("deepseek-v4.1-flash").body.response_format).toEqual({ type: "json_object" });
   });

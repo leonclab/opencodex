@@ -13,6 +13,8 @@ export {
   toolAllowedByChoice,
   resolveToolChoiceWireName,
   modelInList,
+  isNoStructuredOutputModel,
+  isNoJsonSchemaModel,
   isAllowedToolChoice,
   toolChoiceToolPredicate,
   declaresCodeModeExec,

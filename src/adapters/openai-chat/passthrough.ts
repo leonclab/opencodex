@@ -8,7 +8,7 @@ import { canonicalFastTierMarker, decideTier, type ResolvedFastPolicy } from "..
 import { debugProviderDiagnostic } from "../../lib/debug";
 import { isDebugEnabled } from "../../lib/debug-settings";
 import { modelRecordValue } from "../../reasoning-effort";
-import { modelInList, type OcxProviderConfig } from "../../types";
+import { isNoJsonSchemaModel, isNoStructuredOutputModel, modelInList, type OcxProviderConfig } from "../../types";
 
 const CHAT_PASSTHROUGH_FIELDS = [
   "audio",
@@ -80,13 +80,13 @@ export function buildOpenAIChatPassthroughRequest(
   // "only an exact requested-model match omits the field" (#1424), and the Responses
   // ingress enforces exactly that. A prefix match here would strip response_format from
   // `<listed>:<tag>` siblings the operator never opted out, silently returning prose.
-  if (provider.noStructuredOutputModels?.includes(modelId)) delete body.response_format;
+  if (isNoStructuredOutputModel(provider.noStructuredOutputModels, modelId)) delete body.response_format;
   // Narrower neighbour: the model takes `json_object` but rejects `json_schema`. Downgrade
   // rather than drop, so a caller that asked for JSON still gets JSON. The type check also
   // makes the kill switch above win without an else — after its `delete` there is no type
   // left to match.
   const passthroughFormat = body.response_format;
-  if (provider.noJsonSchemaModels?.includes(modelId)
+  if (isNoJsonSchemaModel(provider.noJsonSchemaModels, modelId)
       && typeof passthroughFormat === "object" && passthroughFormat !== null
       && (passthroughFormat as { type?: unknown }).type === "json_schema") {
     body.response_format = { type: "json_object" };

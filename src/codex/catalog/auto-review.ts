@@ -4,7 +4,7 @@ import { encodeRoutedModelId } from "../../providers/slug-codec";
 import { canonicalAutoReviewModelKey, isValidAutoReviewModel as isValidAutoReviewTarget } from "../../config/provider-validation";
 import { readConfiguredAutoReviewModel } from "./parsing";
 import type { RawEntry } from "./parsing";
-import { configuredCatalogEntry } from "./subagent-roster";
+import { CATALOG_INACTIVE_REASON_FIELD, configuredCatalogEntry } from "./subagent-roster";
 
 const AUTO_REVIEW_ROOT_MARKER = "opencodex_auto_review_root";
 
@@ -28,6 +28,14 @@ function rootAutoReviewStamp(entry: RawEntry): RootAutoReviewStamp | undefined {
 /** True when the value is a valid Codex catalog auto-review selector. */
 export function isValidAutoReviewModel(value: unknown): value is string {
   return isValidAutoReviewTarget(value);
+}
+
+/** True when the target catalog row can be safely used as an auto-reviewer. */
+export function isViableAutoReviewEntry(entry: RawEntry | undefined): boolean {
+  if (!entry || typeof entry !== "object") return false;
+  const reason = entry[CATALOG_INACTIVE_REASON_FIELD];
+  if (typeof reason === "string" && reason.trim().length > 0) return false;
+  return true;
 }
 
 export type AutoReviewModelOverrideResult = "absent" | "applied" | "invalid" | "unresolved";
@@ -233,7 +241,8 @@ export function applyAutoReviewModelOverride(
     warnAutoReviewModelDiagnostic("invalid", trimmed);
     return "invalid";
   }
-  if (!configuredCatalogEntry(models, trimmed)) {
+  const targetEntry = configuredCatalogEntry(models, trimmed);
+  if (!targetEntry || !isViableAutoReviewEntry(targetEntry)) {
     clearAutoReviewModelOverride(models, sourceModels);
     warnAutoReviewModelDiagnostic("unresolved", trimmed);
     return "unresolved";
@@ -322,7 +331,7 @@ function resolveProviderReviewTarget(
     // After the full-selector lookup misses, try that spelling as a same-provider id.
     match = sameProviderCandidate(configured);
   }
-  if (!match) return { kind: "unresolved", configured };
+  if (!match || !isViableAutoReviewEntry(match)) return { kind: "unresolved", configured };
   const target = typeof match.slug === "string" ? match.slug : configured;
   // A qualified selector may name another provider's row on purpose; only a bare value that lands
   // outside this provider is worth reporting.
@@ -421,7 +430,8 @@ function applyRootSelectorToRemaining(
     warnAutoReviewModelDiagnostic("invalid", trimmed);
     return "invalid";
   }
-  if (!configuredCatalogEntry(models, trimmed)) {
+  const targetEntry = configuredCatalogEntry(models, trimmed);
+  if (!targetEntry || !isViableAutoReviewEntry(targetEntry)) {
     clearRemaining();
     warnAutoReviewModelDiagnostic("unresolved", trimmed);
     return "unresolved";

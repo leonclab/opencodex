@@ -4,7 +4,7 @@ import { normalizeOpenCodeGoAdditionalTools } from "../opencode-go-additional-to
 import { isXaiResponsesDestination } from "../../providers/xai-transport";
 import { Buffer } from "node:buffer";
 import type { IncomingMeta, ProviderAdapter } from "../base";
-import { namespacedToolName, type AdapterEvent, type OcxParsedRequest, type OcxProviderConfig, type OcxUsage, type TierDecision } from "../../types";
+import { isNoJsonSchemaModel, isNoStructuredOutputModel, namespacedToolName, type AdapterEvent, type OcxParsedRequest, type OcxProviderConfig, type OcxUsage, type TierDecision } from "../../types";
 import { applyCodexRoutingHint, CODEX_RESPONSES_LITE_HEADER, CODEX_ROUTING_HINT_HEADER } from "../../codex/forward-transport-headers";
 import { COMPACT_PROMPT, compactionItemToText, decodeCompactionSummary, isCompactionItemType } from "../../responses/compaction";
 import { decodeServerSentEvents } from "../../lib/sse-decoder";
@@ -371,6 +371,32 @@ export function createResponsesPassthroughAdapter(provider: OcxProviderConfig): 
       outBody = normalizeResponsesCodeMode(outBody, parsed, provider);
       if (parsed._compactionRequest === true && !isCanonicalOpenAiForwardProvider(provider)) {
         outBody = buildRoutedCompactionBody(outBody);
+      }
+      if (!isCanonicalOpenAiForwardProvider(provider) && isPlainObject(outBody) && isPlainObject((outBody as { text?: unknown }).text)) {
+        const textObj = (outBody as { text: Record<string, unknown> }).text;
+        const targetModel = parsed.modelId || (typeof (outBody as { model?: unknown }).model === "string" ? (outBody as { model: string }).model : undefined);
+        if (isPlainObject(textObj.format)) {
+          if (isNoStructuredOutputModel(provider.noStructuredOutputModels, targetModel)) {
+            const { format: _format, ...restText } = textObj;
+            outBody = { ...outBody };
+            if (Object.keys(restText).length > 0) {
+              (outBody as Record<string, unknown>).text = restText;
+            } else {
+              delete (outBody as Record<string, unknown>).text;
+            }
+          } else if (
+            isNoJsonSchemaModel(provider.noJsonSchemaModels, targetModel)
+            && (textObj.format as { type?: unknown }).type === "json_schema"
+          ) {
+            outBody = {
+              ...outBody,
+              text: {
+                ...textObj,
+                format: { type: "json_object" },
+              },
+            };
+          }
+        }
       }
       // Run after routed compaction so nested input_image parts are replaced before a malformed
       // tool output is flattened to text and can no longer be inspected structurally.

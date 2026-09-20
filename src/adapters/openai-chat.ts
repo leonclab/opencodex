@@ -1,7 +1,7 @@
 import { hasShrinkableOpenAIChatImages, normalizeOpenAIChatImages } from "./openai-chat-images";
 import type { AdapterRequest, IncomingMeta, ProviderAdapter } from "./base";
 import type { AdapterEvent, OcxParsedRequest, OcxProviderConfig, OcxUsage } from "../types";
-import { modelInList } from "../types";
+import { isNoJsonSchemaModel, isNoStructuredOutputModel, modelInList } from "../types";
 import { mapReasoningEffort, modelRecordValue } from "../reasoning-effort";
 import { debugProviderDiagnostic } from "../lib/debug";
 import { sseFieldValue } from "../lib/sse-decoder";
@@ -226,14 +226,14 @@ export function createOpenAIChatAdapter(provider: OcxProviderConfig): ProviderAd
         // gateway exposes a uniform OpenAI-compatible endpoint. Keep the #1137 translation
         // as the default, but let an exact model opt out instead of forcing a provider-wide
         // rollback that would silently return prose for siblings that support JSON Schema.
-        if (!provider.noStructuredOutputModels?.includes(parsed.modelId)) {
+        if (!isNoStructuredOutputModel(provider.noStructuredOutputModels, parsed.modelId)) {
           const textFormat = parsed.options.textFormat;
           if (textFormat?.type === "json_object") {
             body.response_format = { type: "json_object" };
           } else if (textFormat?.type === "json_schema") {
             // Same downgrade as the passthrough path: the schema is dropped because the
             // upstream rejects it, but the JSON-mode request itself survives.
-            body.response_format = provider.noJsonSchemaModels?.includes(parsed.modelId)
+            body.response_format = isNoJsonSchemaModel(provider.noJsonSchemaModels, parsed.modelId)
               ? { type: "json_object" }
               : {
                 type: "json_schema",

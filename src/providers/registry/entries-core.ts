@@ -48,6 +48,8 @@ import {
   OPENCODE_GO_THINKING_BUDGET_MODELS,
   DEEPSEEK_NATIVE_THINKING_MODELS,
   DEEPSEEK_GATEWAY_THINKING_MODELS,
+  DEEPSEEK_NATIVE_NO_JSON_SCHEMA_MODELS,
+  DEEPSEEK_GATEWAY_NO_JSON_SCHEMA_MODELS,
   DEEPSEEK_VISION_PREVIEW_MODEL,
   COMMAND_CODE_MODEL_INPUT_MODALITIES,
   deepseekThinkingEffortsFor,
@@ -1088,6 +1090,7 @@ export const PROVIDER_REGISTRY_CORE: readonly ProviderRegistryEntry[] = [
     // Keep unprobed compatibility aliases on the #88 sidecar path. This must be fixed
     // here: router enrichment unions this list with saved config, so config cannot remove it.
     noVisionModels: ["deepseek-chat", "deepseek-reasoner", "deepseek-v4-flash"],
+    noJsonSchemaModels: [...DEEPSEEK_NATIVE_NO_JSON_SCHEMA_MODELS, DEEPSEEK_VISION_PREVIEW_MODEL],
   },
   // llama-3.3-70b was deprecated by Cerebras on 2026-02-16. Evidence: devlog/_plan/260710_provider_hardening/003_research_aggregators.md.
   { id: "cerebras", label: "Cerebras", baseUrl: "https://api.cerebras.ai/v1", adapter: "openai-chat", authKind: "key", dashboardUrl: "https://cloud.cerebras.ai/platform/apikeys", defaultModel: "gpt-oss-120b" },

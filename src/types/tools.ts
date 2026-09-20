@@ -311,6 +311,48 @@ export function modelInList(list: string[] | undefined, modelId: string): boolea
   return colon > 0 && list.includes(modelId.slice(0, colon));
 }
 
+/**
+ * True when a model is opted out of structured output (JSON mode or JSON Schema).
+ * Matches exact id, or the trailing model segment if a provider prefix was retained.
+ */
+export function isNoStructuredOutputModel(
+  list: readonly string[] | undefined,
+  modelId: string | undefined,
+): boolean {
+  if (!list || list.length === 0 || !modelId) return false;
+  if (list.includes(modelId)) return true;
+  if (modelId.includes("/")) {
+    const segment = modelId.slice(modelId.lastIndexOf("/") + 1);
+    if (list.includes(segment)) return true;
+  }
+  return false;
+}
+
+/**
+ * True when a model cannot handle `json_schema` response format and must be downgraded
+ * to `json_object`. Matches exact id, or the trailing model segment if a provider prefix
+ * was retained.
+ */
+export function isNoJsonSchemaModel(
+  list: readonly string[] | undefined,
+  modelId: string | undefined,
+): boolean {
+  if (!list || list.length === 0 || !modelId) return false;
+  if (list.includes(modelId)) return true;
+  const segment = modelId.includes("/") ? modelId.slice(modelId.lastIndexOf("/") + 1) : modelId;
+  if (list.includes(segment)) return true;
+  // If the provider lists gateway DeepSeek models (which reject json_schema on the upstream gateway),
+  // recognize canonical and compatibility DeepSeek aliases (deepseek-flash, deepseek-chat, deepseek-reasoner)
+  // as eligible for json_schema -> json_object downgrade.
+  if (
+    (segment === "deepseek-flash" || segment === "deepseek-chat" || segment === "deepseek-reasoner")
+    && (list.includes("deepseek-v4.1-flash") || list.includes("deepseek-v4-flash"))
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export type OcxToolChoice =
   | "auto"
   | "none"
