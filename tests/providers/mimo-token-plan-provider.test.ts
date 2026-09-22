@@ -16,7 +16,8 @@ describe("Xiaomi MiMo public OpenAI Chat endpoint (#1483)", () => {
       baseUrl,
       dashboardUrl: "https://platform.xiaomimimo.com/console/balance",
       defaultModel: "mimo-v2.5",
-      models: ["mimo-v2.5"],
+      models: ["mimo-v2.6-pro", "mimo-v2.6-flash", "mimo-v2.5"],
+      modelContextWindows: { "mimo-v2.6-pro": 1_048_576, "mimo-v2.6-flash": 1_048_576 },
       preserveCustomDestination: true,
       reasoningEfforts: ["low", "medium", "high"],
     });
@@ -35,12 +36,13 @@ describe("Xiaomi MiMo public OpenAI Chat endpoint (#1483)", () => {
         },
       },
     };
-    const route = routeModel(config, "xiaomi-mimo/mimo-v2.5");
+    const route = routeModel(config, "xiaomi-mimo/mimo-v2.6-flash");
     const catalogModel = applyProviderConfigHints("xiaomi-mimo", route.provider, {
       provider: "xiaomi-mimo",
       id: route.modelId,
     });
 
+    expect(catalogModel.contextWindow).toBe(1_048_576);
     expect(catalogModel.reasoningEfforts).toEqual(["low", "medium", "high"]);
     for (const tier of ["xhigh", "max", "ultra"]) {
       expect(mapReasoningEffort(route.provider, route.modelId, tier)).toBe("high");
@@ -79,7 +81,8 @@ describe("Xiaomi MiMo token plan (#1158)", () => {
     // wire the default.
     expect(entry?.adapter).toBe("openai-chat");
     expect(entry?.baseUrl).toBe("https://token-plan-cn.xiaomimimo.com/v1");
-    expect(entry?.models).toEqual(["mimo-v2.5-pro", "mimo-v2.5"]);
+    expect(entry?.models).toEqual(["mimo-v2.6-pro", "mimo-v2.6-flash", "mimo-v2.5-pro", "mimo-v2.5"]);
+    expect(entry?.modelContextWindows).toEqual({ "mimo-v2.6-pro": 1_048_576, "mimo-v2.6-flash": 1_048_576 });
 
     const derived = KEY_LOGIN_PROVIDERS["mimo"];
     expect(derived?.adapter).toBe("openai-chat");

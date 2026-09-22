@@ -233,6 +233,15 @@ test("Models page combines final visibility, atomic actions, discovery status, a
     expect(container.querySelector(".badge.badge-amber")?.textContent).toContain("Discovery failed");
     expect(container.textContent).not.toContain("Not selected");
 
+    const inlineContext = container.querySelector<HTMLButtonElement>(
+      `button[aria-label="Custom windows — ${provider}/claude-opus"]`,
+    )!;
+    expect(inlineContext.textContent).toBe("Model override");
+    await act(async () => inlineContext.click());
+    const inlineDialog = container.querySelector<HTMLElement>('[role="dialog"][aria-label="Custom windows"]')!;
+    expect(inlineDialog.querySelectorAll<HTMLInputElement>("input")[1]!.value).toBe("64000");
+    await act(async () => inlineDialog.querySelector<HTMLButtonElement>('button[aria-label="Close"]')!.click());
+
     await act(async () => buttonText("Custom windows").click());
     const contextDialog = container.querySelector<HTMLElement>('[role="dialog"][aria-label="Custom windows"]')!;
     const contextInputs = contextDialog.querySelectorAll<HTMLInputElement>("input");

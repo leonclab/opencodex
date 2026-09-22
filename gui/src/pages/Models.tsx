@@ -743,7 +743,7 @@ export default function Models({ apiBase, restartEpoch = 0, catalogSyncedAt, rep
    */
   const catalogCountReady = models.length > 0 || catalogState.data !== undefined;
 
-  const openContextSettings = (group: ProviderModelGroup<ModelRow>) => {
+  const openContextSettings = (group: ProviderModelGroup<ModelRow>, initialModelId?: string) => {
     const modelIds = [...new Set([
       ...group.rows.map(model => model.id),
       ...group.configuredModels,
@@ -751,7 +751,7 @@ export default function Models({ apiBase, restartEpoch = 0, catalogSyncedAt, rep
       // would sit in the drafts map, invisible in the picker, with no way to inspect or clear it.
       ...Object.keys(group.modelContextWindows ?? {}),
     ])].sort();
-    const modelId = modelIds[0] ?? "";
+    const modelId = initialModelId && modelIds.includes(initialModelId) ? initialModelId : modelIds[0] ?? "";
     setContextModalProvider(group.provider);
     setContextModalModels(modelIds);
     setContextModelId(modelId);
@@ -1743,6 +1743,12 @@ export default function Models({ apiBase, restartEpoch = 0, catalogSyncedAt, rep
                      </span>
                      {aliases.models[provider]?.[m.id]?.source === "builtin" && <span className="models-chip muted text-caption">{t("models.aliasAuto")}</span>}
                      <button type="button" className="btn btn-ghost btn-sm" aria-label={t("models.editModelAlias")} title={t("models.editModelAlias")} onClick={() => void saveModelAlias(provider, m.id)}><IconPencil style={{ width: 13, height: 13 }} /></button>
+                     <button type="button" className="btn btn-ghost btn-sm text-caption"
+                       aria-haspopup="dialog"
+                       aria-label={t("models.contextSettingsTitle", { provider: m.namespaced })}
+                       onClick={() => openContextSettings(group, m.id)}>
+                       {ownRecordValue(group.modelContextWindows ?? {}, m.id) !== undefined ? t("models.contextModelOverride") : t("models.contextSettings")}
+                     </button>
                      {!m.native && !m.custom && (
                        <button
                          type="button"
