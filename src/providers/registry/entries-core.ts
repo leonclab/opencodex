@@ -693,6 +693,9 @@ export const PROVIDER_REGISTRY_CORE: readonly ProviderRegistryEntry[] = [
       // 1.3 ships the same window as 1.2 and is served from the same Zen Go roster.
       "muse-spark-1.3-contributor": 1_048_576,
       "muse-spark-1.2-contributor": 1_048_576,
+      "mimo-v2.6-flash": 1_048_576,
+      "mimo-v2.6-pro": 1_048_576,
+      "mimo-v2.6": 1_048_576,
     },
     modelInputModalities: {
       "kimi-k3": ["text", "image"],
@@ -1258,4 +1261,3 @@ export const PROVIDER_REGISTRY_CORE: readonly ProviderRegistryEntry[] = [
     note: "Serverless Inference subscription API. Live discovery exposes only kimi-k2-instruct because Vultr documents it as the sole tool-calling model.",
   },
 ];
-

@@ -43,6 +43,7 @@ import { messagesToChatFormat } from "./openai-chat/messages";
 import { withOpenAIChatToolNames } from "./openai-chat/tool-name-registry";
 import { isNativeOpenAIChatTarget, openAIChatTransport, stripBracketedModelSuffix } from "./openai-chat/wire";
 import { toolChoiceToChatFormat, toolsToChatFormatForProvider } from "./openai-chat/tool-schema";
+import { drainTextToolCalls, parseAllTextToolCalls, appendDrainedTextToolEvents, emitDrainedTextToolEvents, flushPendingTextToolEvents } from "./openai-chat/stream-dispatch";
 
 export { stripBracketedModelSuffix } from "./openai-chat/wire";
 export { buildOpenAIChatPassthroughRequest } from "./openai-chat/passthrough";
@@ -376,6 +377,7 @@ export function createOpenAIChatAdapter(provider: OcxProviderConfig): ProviderAd
       let pendingUsage: OcxUsage | undefined;
       let finishReason: string | undefined;
       let sawUserFacingOutput = false;
+      let pendingTextToolCall = "";
       // MiniMax-style structured reasoning: each stream chunk repeats a detail's
       // full text-so-far, so deltas are derived by prefix-diffing per segment key.
       // A piece that does not extend the previous snapshot is appended whole, which
@@ -452,7 +454,9 @@ export function createOpenAIChatAdapter(provider: OcxProviderConfig): ProviderAd
           }
           if (typeof delta.content === "string" && delta.content.length > 0) {
             sawUserFacingOutput = true;
-            yield { type: "text_delta", text: delta.content };
+            const drained = drainTextToolCalls(pendingTextToolCall, delta.content);
+            pendingTextToolCall = drained.pending;
+            yield* emitDrainedTextToolEvents(drained, toolNames, () => ++toolCallSeq);
           }
 
           const rawToolCalls = delta.tool_calls;
@@ -661,6 +665,7 @@ export function createOpenAIChatAdapter(provider: OcxProviderConfig): ProviderAd
           yield { type: "error", message: "upstream stream ended without a terminal signal ([DONE] or finish_reason) — possible truncation" };
           return;
         }
+        yield* flushPendingTextToolEvents(pendingTextToolCall, toolNames, () => ++toolCallSeq);
         if ((yield* flushToolCalls()) === "terminate") return;
         const stopReason = stopReasonFor(finishReason);
         yield { type: "done", usage: pendingUsage, ...(stopReason ? { stopReason } : {}) };
@@ -736,6 +741,7 @@ export function createOpenAIChatAdapter(provider: OcxProviderConfig): ProviderAd
         const choice = rawChoice;
         if (choice.finish_reason === "error") return [upstreamErrorEvent(choice.error, usage)];
         if (!choice.message) return [{ type: "error", message: "upstream response contained no choices", ...(usage ? { usage } : {}) }];
+        let toolCallSeq = 0;
         // `!choice.message` splits this input class on TRUTHINESS, not on shape: `null` and `0` fail
         // closed here, while `"text"`, `true` and `[{...}]` pass and every property read below yields
         // `undefined` — so a choice claiming an assistant message completed as a SUCCESSFUL EMPTY
@@ -767,7 +773,10 @@ export function createOpenAIChatAdapter(provider: OcxProviderConfig): ProviderAd
           if (segments.length > 0) reasoningText = segments.map(s => s.text).join("");
         }
         if (reasoningText !== undefined) events.push({ type: "reasoning_raw_delta", text: reasoningText });
-        if (typeof msg.content === "string") events.push({ type: "text_delta", text: msg.content });
+        if (typeof msg.content === "string") {
+          const parsed = parseAllTextToolCalls(msg.content);
+          appendDrainedTextToolEvents(events, parsed.text, parsed.calls, toolNames, () => ++toolCallSeq);
+        }
         const rawToolCalls = msg.tool_calls;
         if (rawToolCalls !== undefined && rawToolCalls !== null) {
           if (!Array.isArray(rawToolCalls)) {

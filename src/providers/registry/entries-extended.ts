@@ -1051,6 +1051,9 @@ export const PROVIDER_REGISTRY_EXTENDED: readonly ProviderRegistryEntry[] = [
     // (merges into deepseek-v4-flash later).
     modelContextWindows: {
       [DEEPSEEK_VISION_PREVIEW_MODEL]: 1_048_576,
+      "mimo-v2.6-flash": 1_048_576,
+      "mimo-v2.6-pro": 1_048_576,
+      "mimo-v2.6": 1_048_576,
     },
     modelInputModalities: {
       [DEEPSEEK_VISION_PREVIEW_MODEL]: ["text", "image"],
@@ -1122,6 +1125,9 @@ export const PROVIDER_REGISTRY_EXTENDED: readonly ProviderRegistryEntry[] = [
     // serving it (merges into v4-flash later).
     modelContextWindows: {
       [DEEPSEEK_VISION_PREVIEW_MODEL]: 1_048_576,
+      "mimo-v2.6-flash": 1_048_576,
+      "mimo-v2.6-pro": 1_048_576,
+      "mimo-v2.6": 1_048_576,
     },
     modelInputModalities: {
       [DEEPSEEK_VISION_PREVIEW_MODEL]: ["text", "image"],
@@ -1148,7 +1154,12 @@ export const PROVIDER_REGISTRY_EXTENDED: readonly ProviderRegistryEntry[] = [
     authKind: "key",
     dashboardUrl: "https://platform.xiaomimimo.com/console/balance",
     defaultModel: "mimo-v2.5",
-    models: ["mimo-v2.5"],
+    models: ["mimo-v2.6", "mimo-v2.5"],
+    modelContextWindows: {
+      "mimo-v2.6": 1_048_576,
+      "mimo-v2.6-flash": 1_048_576,
+      "mimo-v2.6-pro": 1_048_576,
+    },
     reasoningEfforts: ["low", "medium", "high"],
     reasoningEffortMap: { xhigh: "high", max: "high", ultra: "high" },
     preserveCustomDestination: true,
@@ -1189,7 +1200,12 @@ export const PROVIDER_REGISTRY_EXTENDED: readonly ProviderRegistryEntry[] = [
     authKind: "key",
     dashboardUrl: "https://xiaomimimo.com",
     defaultModel: "mimo-v2.5-pro",
-    models: ["mimo-v2.5-pro", "mimo-v2.5"],
+    models: ["mimo-v2.6-pro", "mimo-v2.6-flash", "mimo-v2.5-pro", "mimo-v2.5"],
+    modelContextWindows: {
+      "mimo-v2.6-pro": 1_048_576,
+      "mimo-v2.6-flash": 1_048_576,
+      "mimo-v2.6": 1_048_576,
+    },
     // The gateway validates the ladder strictly and rejects anything above `high`.
     reasoningEfforts: ["low", "medium", "high"],
     reasoningEffortMap: { xhigh: "high", max: "high", ultra: "high" },
