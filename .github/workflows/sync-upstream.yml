@@ -1,0 +1,109 @@
+name: Sync Upstream Baseline
+
+on:
+  schedule:
+    # 每天 UTC 20:00（北京时间次日凌晨 04:00）自动运行
+    - cron: "0 20 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream-baseline
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync dev and main from upstream
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Sync upstream dev and main
+        run: |
+          set -euo pipefail
+
+          UPSTREAM_URL="https://github.com/lidge-jun/opencodex.git"
+          BRANCHES=("dev" "main")
+
+          echo "=== 1. 配置并拉取 upstream 与 origin 远端引用 ==="
+          git remote add upstream "$UPSTREAM_URL" 2>/dev/null || git remote set-url upstream "$UPSTREAM_URL"
+          git fetch upstream --prune
+          git fetch origin --prune
+
+          echo "=== 2. 检查基线与纯 Fast-Forward 同步 ==="
+          fail=0
+          for branch in "${BRANCHES[@]}"; do
+            echo "----------------------------------------"
+            echo "正在处理分支: $branch"
+            up_ref="refs/remotes/upstream/$branch"
+            or_ref="refs/remotes/origin/$branch"
+
+            up_sha=$(git rev-parse --verify --quiet "$up_ref") || {
+              echo "::error::upstream/$branch 引用不存在"
+              fail=1
+              continue
+            }
+
+            if or_sha=$(git rev-parse --verify --quiet "$or_ref"); then
+              behind=$(git rev-list --count "$or_ref..$up_ref")
+              ahead=$(git rev-list --count "$up_ref..$or_ref")
+              or_short="${or_sha:0:9}"
+            else
+              or_sha=""
+              or_short="(缺失)"
+              behind=$(git rev-list --count "$up_ref")
+              ahead=0
+            fi
+
+            echo "分支状态: upstream=${up_sha:0:9}, origin=$or_short (落后 $behind / 领先 $ahead)"
+
+            if [ "$behind" -eq 0 ] && [ "$ahead" -eq 0 ]; then
+              echo "✅ $branch: 已与 upstream 对齐 (${up_sha:0:9})，无需同步"
+              continue
+            fi
+
+            if [ "$ahead" -ne 0 ]; then
+              echo "::error::origin/$branch 存在 $ahead 个非上游提交 (ahead)，可能已被污染或存在冲突。根据镜像契约拒绝非 fast-forward 推送！"
+              echo "差异提交（前 5 个）："
+              git log --oneline -n 5 "$up_ref..$or_ref" || true
+              fail=1
+              continue
+            fi
+
+            echo "🚀 正在纯 fast-forward 同步 $branch: $or_short -> ${up_sha:0:9} (前进 $behind 个提交) ..."
+            git log --oneline -n 5 "$or_ref..$up_ref" || true
+            git push origin "$up_ref:refs/heads/$branch"
+            echo "🎉 $branch 同步完成，当前 SHA: ${up_sha:0:9}"
+          done
+
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::同步过程存在错误或无法 fast-forward 的分支，工作流终止！"
+            exit 1
+          fi
+
+          echo "=== 3. 同步后双端 SHA 一致性校验 ==="
+          git fetch origin --prune --quiet
+          for branch in "${BRANCHES[@]}"; do
+            up_final=$(git rev-parse "refs/remotes/upstream/$branch")
+            or_final=$(git rev-parse "refs/remotes/origin/$branch")
+            if [ "$up_final" = "$or_final" ]; then
+              echo "✅ 校验通过: origin/$branch == upstream/$branch (${up_final:0:9})"
+            else
+              echo "::error::校验失败: origin/$branch ($or_final) 与 upstream/$branch ($up_final) 不一致"
+              fail=1
+            fi
+          done
+
+          if [ "$fail" -ne 0 ]; then
+            exit 1
+          fi
+
+          echo "🎉 全部目标分支 (dev, main) 均已成功与 upstream 完成对齐！"
+
