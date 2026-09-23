@@ -277,6 +277,15 @@ export function applyReasoningLevels(
  * accident disappeared, and the sync path's else-branch
  * (`applyReasoningLevels(entry, ["low","medium","high","xhigh"])`) would have truncated the
  * shipped ladder, silently dropping `max` and `ultra`.
+ *
+ * Membership means "new-ladder native: keep the pinned ladder, never synthesize old-ladder top
+ * rungs" — NOT "advertise ultra". Returning false for a self-described row would be worse, not
+ * safer: every false branch (`finishUpstreamNativeEntry`, the persisted-row path in
+ * build-entries) calls `ensureUltraReasoningLevel`, which would hand `ultra` to `gpt-6-luna`.
+ * Whether `ultra` is added is decided separately by `nativeLadderIncludesUltra`.
+ *
+ * A capability alias of a self-described row qualifies through its source (`gpt-6-astra-minor`
+ * borrows `gpt-6-astra`), the same way Daybreak Blue qualifies through `gpt-5.6-sol`.
  */
 export function isGpt56NativeSlug(slug: string): boolean {
   if (slug.includes("/")) return false;
@@ -286,11 +295,13 @@ export function isGpt56NativeSlug(slug: string): boolean {
 }
 
 /**
- * Whether a new-ladder native may advertise ultra.
+ * Whether a new-ladder native may advertise `ultra`.
  *
  * GPT-5.6 keeps its historical behaviour (always advertised; the wire clamp maps it down). A
- * self-described GPT-6 row answers from its OWN pinned ladder, or its source for an alias:
- * gpt-6-sol ships with low..ultra but gpt-6-luna ships with low..max.
+ * self-described GPT-6 row answers from its OWN pinned ladder, or its source's for an alias:
+ * the 2026-09-23 roster probe (`/backend-api/codex/models?client_version=0.155.0`) ships
+ * `gpt-6-sol` with low..ultra but `gpt-6-luna` with low..max, and advertising a rung upstream
+ * never listed would let a subagent spawn request an effort the model does not have.
  */
 export function nativeLadderIncludesUltra(slug: string): boolean {
   const sourceSlug = nativeOpenAiCapabilitySourceSlug(slug);
@@ -306,7 +317,7 @@ export function ensureGpt56ReasoningLevels(entry: RawEntry): void {
     : [];
   const out = [...levels];
   // max is a real native rung on the 5.6 family — always restored. ultra is advertised unless
-  // the slug pinned ladder (or its source) stops short of it, as gpt-6-luna does.
+  // the slug's pinned ladder (or its source's) stops short of it, as gpt-6-luna's does.
   const wanted = typeof entry.slug === "string" && !nativeLadderIncludesUltra(entry.slug)
     ? ["max"]
     : ["max", "ultra"];
@@ -433,6 +444,10 @@ export interface CatalogEffortCompatibility {
   readonly affectedModels: readonly string[];
 }
 
+// These parser-valid sentinels do not appear in native model ladders, so absence from an
+// observed bundled catalog is not evidence that the selected Codex runtime rejects them.
+const CODEX_PARSER_SENTINEL_EFFORTS = new Set(["none", "minimal"]);
+
 /**
  * Report which reasoning efforts in a catalog the local Codex runtime would reject, without
  * changing anything.
@@ -452,9 +467,11 @@ export function catalogEffortCompatibility(
   const unsupported = new Set<string>();
   const affected: string[] = [];
   for (const entry of models) {
-    const rejected = catalogEntryEfforts(entry).filter(effort => !supported.has(effort));
+    const accepts = (effort: string): boolean => supported.has(effort)
+      || CODEX_PARSER_SENTINEL_EFFORTS.has(effort);
+    const rejected = catalogEntryEfforts(entry).filter(effort => !accepts(effort));
     const fallback = typeof entry.default_reasoning_level === "string"
-      && !supported.has(entry.default_reasoning_level)
+      && !accepts(entry.default_reasoning_level)
       ? [entry.default_reasoning_level]
       : [];
     if (rejected.length === 0 && fallback.length === 0) continue;

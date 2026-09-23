@@ -1,3 +1,4 @@
+import { getEffectiveCodexAutoSwitchThreshold } from "../account-auto-switch";
 import { isCodexAccountPaused } from "../account-pause";
 import { codexAccountPriorityLookup, pinnedCodexAccountId } from "../account-priority";
 import { isSelectableCodexPoolAccount } from "../account-id";
@@ -250,7 +251,7 @@ export function hasCodexQuotaHeadroom(
   selectionOptions?: CodexAccountUsabilityOptions,
   now: number = Date.now(),
 ): boolean {
-  const threshold = config.autoSwitchThreshold ?? 80;
+  const threshold = getEffectiveCodexAutoSwitchThreshold(config, accountId);
   if (threshold <= 0) return true;
   const usage = computeCodexUsageScore(
     getAccountQuota(accountId),
@@ -475,13 +476,21 @@ export function getPoolAccountPlan(config: OcxConfig, accountId: string): string
     .find(account => isSelectableCodexPoolAccount(account) && account.id === accountId)?.plan;
 }
 
-/** Selection-only main routing must not lazily read the fenced native credential for its plan. */
+/**
+ * Selection-only main routing must not lazily read the fenced native credential for its plan, and
+ * neither may a request whose main candidacy comes from its own bearer (#5019): that request is
+ * forbidden to read the physical main credential, so main is ranked without a plan.
+ */
 export function getPoolAccountPlanForSelection(
   config: OcxConfig,
   accountId: string,
   selectionOptions?: CodexAccountUsabilityOptions,
 ): string | undefined {
-  if (accountId === MAIN_CODEX_ACCOUNT_ID && selectionOptions?.nativeMainSelectionOnly === true) {
+  if (
+    accountId === MAIN_CODEX_ACCOUNT_ID
+    && (selectionOptions?.nativeMainSelectionOnly === true
+      || selectionOptions?.requestOwnedMainCredential === true)
+  ) {
     return undefined;
   }
   return getPoolAccountPlan(config, accountId);
@@ -681,7 +690,7 @@ export function preferModelEntitledAccount(
  *
  * Downward moves are deliberately left to {@link applyQuotaAutoSwitch}: this only
  * fires when the tier filter has already excluded `active`, and only toward a
- * tier that strictly outranks it. Threads bound by affinity never reach here.
+ * tier that strictly outranks it. Bound threads reach it only through explicit priority failback.
  */
 export function pickPriorityPreemption(
   config: OcxConfig,
@@ -721,7 +730,7 @@ export function applyQuotaAutoSwitch(
   selectionOptions?: CodexAccountUsabilityOptions,
   commitSharedSelection = true,
 ): string {
-  const threshold = config.autoSwitchThreshold ?? 80;
+  const threshold = getEffectiveCodexAutoSwitchThreshold(config, active);
   if (threshold <= 0) return active;
   const quota = getAccountQuota(active);
   const activeUsage = computeCodexUsageScore(
