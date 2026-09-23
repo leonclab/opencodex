@@ -24,6 +24,7 @@ function runScript(
       ...extraEnv,
     },
     encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
   });
   const diagnostics = [result.stderr ?? ""];
   if (result.error) {

@@ -23,6 +23,13 @@ export const NATIVE_DAYBREAK_BLUE_MODEL = "gpt-daybreak-blue-latest";
 export const NATIVE_GPT6_ASTRA_MODEL = "gpt-6-astra";
 
 /**
+ * GPT-6 Sol and Luna, announced 2026-09-22.
+ * SELF-DESCRIBED flagship natives listed unconditionally, like gpt-6-astra.
+ */
+export const NATIVE_GPT6_SOL_MODEL = "gpt-6-sol";
+export const NATIVE_GPT6_LUNA_MODEL = "gpt-6-luna";
+
+/**
  * Native ChatGPT/Codex ids whose availability is proven per authenticated account.
  *
  * Membership is expensive: it hides the row from the catalog, `/v1/models`, the dashboard and
@@ -80,6 +87,8 @@ const NATIVE_OPENAI_CAPABILITY_SOURCES: Readonly<Record<string, string>> = Objec
  */
 export const SELF_DESCRIBED_NATIVE_OPENAI_MODELS: ReadonlySet<string> = new Set([
   NATIVE_GPT6_ASTRA_MODEL,
+  NATIVE_GPT6_SOL_MODEL,
+  NATIVE_GPT6_LUNA_MODEL,
 ]);
 
 /**
@@ -159,6 +168,8 @@ export const NATIVE_OPENAI_MODELS = [
   "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna",
   NATIVE_DAYBREAK_BLUE_MODEL,
   NATIVE_GPT6_ASTRA_MODEL,
+  NATIVE_GPT6_SOL_MODEL,
+  NATIVE_GPT6_LUNA_MODEL,
 ];
 
 export const SUPPORTED_NATIVE_OPENAI_SLUGS = new Set(NATIVE_OPENAI_MODELS);
@@ -204,4 +215,6 @@ export const NATIVE_MAIN_DRAIN_SENTINEL_MODELS: ReadonlySet<string> = new Set([
   "gpt-5.6-terra",
   "gpt-5.6-luna",
   NATIVE_GPT6_ASTRA_MODEL,
+  NATIVE_GPT6_SOL_MODEL,
+  NATIVE_GPT6_LUNA_MODEL,
 ]);
