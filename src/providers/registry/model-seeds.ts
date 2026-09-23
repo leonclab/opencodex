@@ -154,6 +154,11 @@ export const OPENAI_API_GPT56_VIRTUAL_MODELS: Record<string, { wireModelId: stri
   "gpt-5.6-luna-pro": { wireModelId: "gpt-5.6-luna", reasoningMode: "pro" },
 };
 export const OPENAI_API_GPT56_REASONING_EFFORTS = ["low", "medium", "high", "xhigh", "max"];
+/**
+ * GPT-6 Sol and Luna on the OpenAI API.
+ * Context window: 1,050,000; max input: 922,000; max output: 128,000; efforts: low..max.
+ */
+export const OPENAI_GPT6_MODELS = ["gpt-6-sol", "gpt-6-luna"];
 /*
  * Meta Model API (https://api.meta.ai/v1) — published ladder, deliberately NOT the
  * house set. dev.meta.ai/docs/reasoning lists "none", "minimal", "low", "medium",

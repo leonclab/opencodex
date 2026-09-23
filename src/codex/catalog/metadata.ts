@@ -43,6 +43,8 @@ import {
   ACCOUNT_GATED_NATIVE_OPENAI_MODELS,
   NATIVE_DAYBREAK_BLUE_MODEL,
   NATIVE_GPT6_ASTRA_MODEL,
+  NATIVE_GPT6_SOL_MODEL,
+  NATIVE_GPT6_LUNA_MODEL,
   NATIVE_RESERVE_MODEL,
   NATIVE_OPENAI_CAPABILITY_ALIAS_MODELS,
   NATIVE_OPENAI_MODELS,
@@ -60,6 +62,8 @@ export { CODEX_NATIVE_ALIAS_CATALOG_KIND } from "./kinds";
 export {
   NATIVE_DAYBREAK_BLUE_MODEL,
   NATIVE_GPT6_ASTRA_MODEL,
+  NATIVE_GPT6_SOL_MODEL,
+  NATIVE_GPT6_LUNA_MODEL,
   NATIVE_OPENAI_CAPABILITY_ALIAS_MODELS,
   NATIVE_OPENAI_MODELS,
   SELF_DESCRIBED_NATIVE_OPENAI_MODELS,
@@ -75,6 +79,8 @@ export const DOCUMENTED_NATIVE_OPENAI_ADDITIONS = [
   "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna",
   // The shipped pin also backfills older installed Codex catalogs that predate Astra.
   NATIVE_GPT6_ASTRA_MODEL,
+  NATIVE_GPT6_SOL_MODEL,
+  NATIVE_GPT6_LUNA_MODEL,
 ];
 
 export function configuredNativeAliasSlugs(
@@ -177,6 +183,8 @@ export const NATIVE_OPENAI_CONTEXT_OVERRIDES: Record<string, { contextWindow?: n
   // maxInputTokens is clamped to the resolved window by nativeOpenAiMaxInputTokens, so this reads
   // 272,000 by default and 872,000 only under the long-window opt-in.
   [NATIVE_GPT6_ASTRA_MODEL]: { contextWindow: 272_000, maxContextWindow: 872_000, maxInputTokens: 872_000 },
+  [NATIVE_GPT6_SOL_MODEL]: { contextWindow: 272_000, maxContextWindow: 872_000, maxInputTokens: 872_000 },
+  [NATIVE_GPT6_LUNA_MODEL]: { contextWindow: 272_000, maxContextWindow: 872_000, maxInputTokens: 872_000 },
 };
 
 const PINNED_UPSTREAM_MODELS: Map<string, RawEntry> = new Map(
@@ -536,7 +544,7 @@ function upstreamNativeEntryForSlug(slug: string): RawEntry | undefined {
   // reserved for slugs that genuinely borrow another model's identity. The allowlist is explicit
   // rather than "has a pinned entry", which would also admit gpt-5.5/gpt-5.2/codex-auto-review into
   // the sync-replacement authority this map carries.
-  if (!sourceSlug.startsWith("gpt-5.6-") && !SELF_DESCRIBED_NATIVE_OPENAI_MODELS.has(slug)) {
+  if (!sourceSlug.startsWith("gpt-5.6-") && !SELF_DESCRIBED_NATIVE_OPENAI_MODELS.has(sourceSlug)) {
     return undefined;
   }
   const source = PINNED_UPSTREAM_MODELS.get(sourceSlug);

@@ -280,8 +280,24 @@ export function applyReasoningLevels(
  */
 export function isGpt56NativeSlug(slug: string): boolean {
   if (slug.includes("/")) return false;
-  if (SELF_DESCRIBED_NATIVE_OPENAI_MODELS.has(slug)) return true;
-  return nativeOpenAiCapabilitySourceSlug(slug).startsWith("gpt-5.6-");
+  const sourceSlug = nativeOpenAiCapabilitySourceSlug(slug);
+  if (SELF_DESCRIBED_NATIVE_OPENAI_MODELS.has(sourceSlug)) return true;
+  return sourceSlug.startsWith("gpt-5.6-");
+}
+
+/**
+ * Whether a new-ladder native may advertise ultra.
+ *
+ * GPT-5.6 keeps its historical behaviour (always advertised; the wire clamp maps it down). A
+ * self-described GPT-6 row answers from its OWN pinned ladder, or its source for an alias:
+ * gpt-6-sol ships with low..ultra but gpt-6-luna ships with low..max.
+ */
+export function nativeLadderIncludesUltra(slug: string): boolean {
+  const sourceSlug = nativeOpenAiCapabilitySourceSlug(slug);
+  if (!SELF_DESCRIBED_NATIVE_OPENAI_MODELS.has(sourceSlug)) return true;
+  const levels = UPSTREAM_NATIVE_ENTRIES.get(sourceSlug)?.supported_reasoning_levels;
+  return Array.isArray(levels)
+    && (levels as Array<{ effort?: string }>).some(level => level?.effort === "ultra");
 }
 
 export function ensureGpt56ReasoningLevels(entry: RawEntry): void {
@@ -289,8 +305,12 @@ export function ensureGpt56ReasoningLevels(entry: RawEntry): void {
     ? entry.supported_reasoning_levels as Array<Partial<CodexReasoningLevel>>
     : [];
   const out = [...levels];
-  // max is a real native rung on the 5.6 family — always restored; ultra always advertised.
-  for (const effort of ["max", "ultra"]) {
+  // max is a real native rung on the 5.6 family — always restored. ultra is advertised unless
+  // the slug pinned ladder (or its source) stops short of it, as gpt-6-luna does.
+  const wanted = typeof entry.slug === "string" && !nativeLadderIncludesUltra(entry.slug)
+    ? ["max"]
+    : ["max", "ultra"];
+  for (const effort of wanted) {
     if (out.some(level => level.effort === effort)) continue;
     out.push(CODEX_REASONING_LEVELS.find(level => level.effort === effort)
       ?? { effort, description: `${effort} reasoning` });
