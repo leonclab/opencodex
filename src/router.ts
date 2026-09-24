@@ -29,6 +29,7 @@ import { cloneFastWire } from "./providers/fastwire";
 import { fastSwitchOff } from "./providers/fast-opt-in";
 import {
   providerMatchesRegistryTransportWithStaticGuards,
+  registryEntrySupportsLiveModelDiscovery,
   providerSupportsLiveModelDiscovery,
 } from "./providers/static-model-discovery";
 import {
@@ -101,7 +102,9 @@ export function captureRouteStaticPolicy(
   const direct = PROVIDER_REGISTRY.find(entry => entry.id === providerName);
   const registryEntry = direct
     ? (providerMatchesRegistryTransportWithStaticGuards(providerName, provider) ? direct : undefined)
-    : registryEntryForProviderDestination(provider);
+    : registryEntryForProviderDestination(provider, {
+        entryFilter: registryEntrySupportsLiveModelDiscovery,
+      });
   const transportMatchedRegistry = !!registryEntry;
   return resolveModelPolicy({
     providerName,

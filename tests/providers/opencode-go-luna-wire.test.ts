@@ -6,8 +6,9 @@
  */
 import { afterEach, describe, expect, test } from "bun:test";
 import { enrichProviderFromRegistry, providerConfigSeed } from "../../src/providers/derive";
-import { getProviderRegistryEntry } from "../../src/providers/registry";
+import { getProviderRegistryEntry, providerModelResponsesTerminalRepair, providerModelWireDefault } from "../../src/providers/registry";
 import { resolveWireProtocolOverride } from "../../src/server/adapter-resolve";
+import { MODEL_ADAPTER_OVERRIDE_ALLOWED } from "../../src/types";
 import { handleResponses } from "../../src/server/responses/core";
 import type { OcxConfig, OcxProviderConfig } from "../../src/types";
 import { createResponsesPassthroughAdapter } from "../../src/adapters/openai-responses";
@@ -16,7 +17,7 @@ import { withTestTranslatorBudget } from "../helpers/translator-budget";
 import { acquireOwnedSpendHome } from "../helpers/owned-spend-home";
 
 const MODEL = "gpt-5.6-luna";
-const GO_RESPONSES_MODELS = [MODEL, "grok-4.6", "muse-spark-1.3-contributor"];
+const GO_RESPONSES_MODELS = [MODEL, "grok-4.6", "grok-4.7", "muse-spark-1.3-contributor", "muse-spark-1.2-contributor"];
 let releaseSpendHome: (() => void) | undefined;
 
 // Direct dispatch needs the writer lease that startServer normally owns for this home.
@@ -65,6 +66,14 @@ describe("OpenCode Go GPT 5.6 Luna wire selection (#1482)", () => {
     const custom = { adapter: "openai-chat", baseUrl: "https://gateway.example.test/v1" };
     expect(resolveWireProtocolOverride("custom-gateway", "muse-spark-1.3-contributor", custom, "responses").adapter)
       .toBe("openai-chat");
+  });
+
+  test("a named provider with the OpenCode Go destination falls back to its registry defaults", () => {
+    const provider = opencodeGo();
+    expect(providerModelWireDefault("openai", provider, "muse-spark-1.3-contributor", MODEL_ADAPTER_OVERRIDE_ALLOWED, "responses"))
+      .toBe("openai-responses");
+    expect(providerModelResponsesTerminalRepair("openai", provider, "muse-spark-1.3-contributor"))
+      .toEqual({ graceMs: 5_000 });
   });
 });
 

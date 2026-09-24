@@ -130,14 +130,14 @@ export function providerMatchesRegistryTransport(
  */
 export function registryEntryForProviderDestination(
   provider: Pick<OcxProviderConfig, "baseUrl" | "adapter"> & Partial<Pick<OcxProviderConfig, "authMode">>,
+  options: { entryFilter?: (entry: ProviderRegistryEntry) => boolean } = {},
 ): ProviderRegistryEntry | undefined {
   if (typeof provider.baseUrl !== "string" || !provider.baseUrl) return undefined;
   if (provider.authMode !== undefined && provider.authMode !== "key") return undefined;
   const endpoint = normalizedProviderEndpoint(provider.baseUrl);
-  const eligible = (entry: ProviderRegistryEntry): boolean =>
-    entry.authKind === "key"
-    && !entry.allowBaseUrlOverride
-    && !/\{[^}]*\}/.test(entry.baseUrl);
+  const eligible = (entry: ProviderRegistryEntry): boolean => entry.authKind === "key"
+    && !entry.allowBaseUrlOverride && !/\{[^}]*\}/.test(entry.baseUrl)
+    && (options.entryFilter?.(entry) ?? true);
   const direct = PROVIDER_REGISTRY.find(entry =>
     eligible(entry)
     && entry.adapter === provider.adapter
@@ -163,7 +163,7 @@ function resolveTargetRegistryEntry(
   provider: Pick<OcxProviderConfig, "baseUrl" | "adapter"> & Partial<Pick<OcxProviderConfig, "authMode">>,
 ): ProviderRegistryEntry | undefined {
   const direct = getProviderRegistryEntry(id);
-  return direct ? (providerMatchesRegistryTransport(id, provider) ? direct : undefined) : registryEntryForProviderDestination(provider);
+  return direct ? (providerMatchesRegistryTransport(id, provider) ? direct : registryEntryForProviderDestination(provider)) : registryEntryForProviderDestination(provider);
 }
 
 export function providerModelWireDefault(
