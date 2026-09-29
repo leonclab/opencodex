@@ -427,7 +427,7 @@ export default function ApiKeys({ apiBase, active = true }: { apiBase: string; a
    *  nothing about Responses. */
   const modelTestRequest = (protocol: GatewayInboundProtocol, modelId: string): { url: string; body: unknown } => {
     if (protocol === "responses") {
-      return { url: endpoints.responses, body: { model: modelId, input: "ping", max_output_tokens: 1, stream: false } };
+      return { url: endpoints.responses, body: { model: modelId, input: "ping", max_output_tokens: 16, stream: false } };
     }
     if (protocol === "messages") {
       return { url: endpoints.messages, body: { model: modelId, max_tokens: 1, messages: [{ role: "user", content: "ping" }] } };

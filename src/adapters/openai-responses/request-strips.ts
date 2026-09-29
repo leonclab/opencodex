@@ -252,3 +252,35 @@ export function scrubOcxCompactionItems(
 
   return changed ? { ...body, input } : body;
 }
+
+/**
+ * Minimum `max_output_tokens` required by strict OpenAI Responses protocol upstream implementations
+ * (e.g. Meta Muse `OG/muse-spark-1.3-contributor`, OpenAI official gateways).
+ */
+export const MIN_RESPONSES_MAX_OUTPUT_TOKENS = 16;
+
+/**
+ * Defensive clamping for `max_output_tokens`.
+ *
+ * Upstream OpenAI Responses protocol implementations (such as Meta Muse and OpenAI official
+ * gateways) strictly validate `max_output_tokens >= 16` and reject smaller values with HTTP 400
+ * (`[invalid_request_error] max_output_tokens: The number must be >= 16`).
+ *
+ * When a caller or client probe sends a numeric `max_output_tokens` in the range
+ * `1 <= max_output_tokens < 16`, defensively clamp it upward to 16 so the upstream does not
+ * reject the request. Returns a copy when clamped, preserving caller ownership of `body`.
+ */
+export function clampResponsesMinOutputTokens(
+  body: unknown,
+  minTokens: number = MIN_RESPONSES_MAX_OUTPUT_TOKENS,
+): unknown {
+  if (!isPlainObject(body)) return body;
+  const mot = (body as Record<string, unknown>).max_output_tokens;
+  if (typeof mot !== "number" || !Number.isFinite(mot)) return body;
+  if (mot >= 1 && mot < minTokens) {
+    return { ...body, max_output_tokens: minTokens };
+  }
+  return body;
+}
+
+export const clampResponsesMaxOutputTokens = clampResponsesMinOutputTokens;

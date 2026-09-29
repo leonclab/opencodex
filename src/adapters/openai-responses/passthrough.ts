@@ -33,7 +33,7 @@ import {
   createAdapterTierMetadata,
 } from "../../providers/fastwire";
 import { dropResponsesReasoningInputItems, mapRoutedResponsesReasoningEffort, normalizeConfiguredReasoningSummaryDelivery, sanitizeReasoningInputContent, stripDisabledReasoningSummaries, stripDisabledVerbosity, stripUnsupportedReasoningSummaryDelivery } from "./reasoning";
-import { scrubOcxCompactionItems, stripCanonicalOnlyToolFields, stripCanonicalOnlyTopLevelFields, stripInternalChatMessageMetadataPassthrough, stripInvalidItemIds, stripItemIdsWhenUnstored } from "./request-strips";
+import { clampResponsesMinOutputTokens, MIN_RESPONSES_MAX_OUTPUT_TOKENS, scrubOcxCompactionItems, stripCanonicalOnlyToolFields, stripCanonicalOnlyTopLevelFields, stripInternalChatMessageMetadataPassthrough, stripInvalidItemIds, stripItemIdsWhenUnstored } from "./request-strips";
 import { stripCanonicalForwardPromptCacheOptions, stripDeprecatedPromptCacheRetention } from "./prompt-cache";
 import { isPlainObject } from "./internal";
 import { normalizeToolSchemas, promoteClientLoadedTools, stripUnsupportedHostedTools } from "./tool-schema";
@@ -272,6 +272,14 @@ export function createResponsesPassthroughAdapter(provider: OcxProviderConfig): 
       // stripPreviousResponseId() intentionally returns its input on a no-op. Detach before the
       // tier write so a force-fast/default decision can never mutate parsed._rawBody.
       outBody = applyTierDecisionToResponsesBody(outBody, parsed.options?.tierDecision);
+      outBody = clampResponsesMinOutputTokens(outBody);
+      if (
+        typeof parsed.options?.maxOutputTokens === "number"
+        && parsed.options.maxOutputTokens >= 1
+        && parsed.options.maxOutputTokens < MIN_RESPONSES_MAX_OUTPUT_TOKENS
+      ) {
+        parsed.options.maxOutputTokens = MIN_RESPONSES_MAX_OUTPUT_TOKENS;
+      }
       const stateless = provider.statelessResponses === true;
       const adjacentToolResults = provider.requiresAdjacentResponsesToolResults === true;
       // Adjacency reorders items the upstream would accept in some order. Pairing synthesizes an
